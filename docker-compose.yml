@@ -3,11 +3,16 @@ version: "3.9"
 services:
   naruto-db:
     image: mongo
+    container_name: nauruto-db-service
     environment:
-      MONGO_INITDB_ROOT_USERNAME: naruto
-      MONGO_INITDB_ROOT_PASSWORD: naruto
+      MONGO_INITDB_ROOT_USERNAME: "naruto"
+      MONGO_INITDB_ROOT_PASSWORD: "naruto"
+    volumes:
+      - naruto-vol:/data/db
     ports:
-      - 21017:21017
+      - 27017:27017
+    networks:
+      - naruto-net
 volumes:
   naruto-vol:
 networks:
