@@ -1,19 +1,19 @@
-const express = require("express");
-const morgan = require("morgan");
-
-const errorController = require("./controllers/errors");
+const fastify = require("fastify")({ logger: true });
 
 const PORT = process.env.PORT || 3000;
 
-const app = express();
+//app.set("trust proxy", true);
 
-app.set("trust proxy", true);
+// Declare a route
+fastify.register(require("./routes/narutoRoute"));
 
-app.use(morgan("dev"));
-
-app.use(errorController.error404);
-app.use(errorController.globalError);
-
-app.listen(PORT, () => {
-	console.log(`listening on port ${PORT}`);
-});
+// Run the server!
+const start = async () => {
+	try {
+		await fastify.listen(PORT);
+	} catch (err) {
+		fastify.log.error(err);
+		process.exit(1);
+	}
+};
+start();

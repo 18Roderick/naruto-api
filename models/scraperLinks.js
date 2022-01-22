@@ -10,6 +10,7 @@ const scraperLinks = new Schema({
 	},
 	nombre: SchemaTypes.String,
 	link: SchemaTypes.String,
+	grupo: SchemaTypes.String,
 	fecha: {
 		type: SchemaTypes.Date,
 		default: new Date(),

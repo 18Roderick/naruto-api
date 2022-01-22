@@ -8,16 +8,21 @@ const informacionSchema = new Schema({});
 const nombreSchema = new Schema({});
 
 const personajeSchema = new Schema({
-	id: {
-		type: SchemaTypes.ObjectId,
-		index: true,
-	},
-	nombre: nombreSchema,
-	jutsus: {
-		type: [String],
-		default: [],
-	},
-	apariencia: String,
+  id: {
+    type: SchemaTypes.ObjectId,
+    index: true,
+  },
+  identificador: {
+    type: SchemaTypes.String,
+    index: true,
+    unique: true,
+  },
+  nombre: nombreSchema,
+  jutsus: {
+    type: [String],
+    default: [],
+  },
+  apariencia: String,
 });
 
 module.exports = mongoose.model("Personaje", personajeSchema);
