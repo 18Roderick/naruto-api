@@ -1,8 +1,11 @@
-const axios = require("axios");
+// @ts-check
+const axios = require("axios").default;
 const cheerio = require("cheerio");
 const fs = require("fs");
 const path = require("path");
 const { createHash } = require("crypto");
+
+const scraperLinks = require("../../models/scraperLinks");
 
 const logger = require("../logger");
 const configUrl = require("./urls");
@@ -12,10 +15,11 @@ const hash = createHash("sha256");
 const NarutoScraper = function () {
   // const ScraperLinks = require("../../models/scraperLinks");
   // const mongoConnection = require("../../models/connection");
+  let connection;
 
   async function initSearch() {
     try {
-      await searchDictionary(configUrl.urlInicial);
+      await searchDictionary(configUrl.personajes);
     } catch (error) {
       console.error("error");
       logger.error(error);
@@ -26,7 +30,7 @@ const NarutoScraper = function () {
     try {
       const pageHtml = await axios.get(url);
       const $ = cheerio.load(pageHtml.data);
-
+      let nextPageUrl = $(".category-page__pagination-next").attr("href");
       const data = $(".category-page__members .category-page__member")
         .map(function () {
           const detalles = $(this).find(".category-page__member-link");
@@ -40,15 +44,14 @@ const NarutoScraper = function () {
         })
         .get();
 
-      // data.shift();
+      data.shift();
       console.log("Tamaño ", data.length);
 
-      // datosObtenidos.personajes = data;
       // datosObtenidos.nextPage = nextPageUrl;
-
-      await searchCharacterInfo(data[0].link);
-
-      return;
+      saveFile(data);
+      await saveLink(data); // searchCharacterInfo(data[0].link);
+      console.log("nextUrl  ", nextPageUrl);
+      return [data, nextPageUrl];
     } catch (error) {
       logger.error(error);
     }
@@ -78,6 +81,10 @@ const NarutoScraper = function () {
     } catch (error) {
       console.error("Error Buscando Info de Personaje", error);
     }
+  }
+
+  function getConnection() {
+    connection = require("../../models/connection");
   }
 
   function searchDetails(html) {
@@ -185,8 +192,8 @@ const NarutoScraper = function () {
       } else {
         // TODO mejorar adquisición de datos en información
 
-        let name = /(\b)[a-zA-Z0-9]{3,8}(\b)/.exec(dto[currentKey]);
-        name = Array.isArray(name) ? name[0] : Date.now().toLocaleString();
+        let rgx = /(\b)[a-zA-Z0-9]{3,8}(\b)/.exec(dto[currentKey]);
+        let name = Array.isArray(rgx) ? rgx[0] : Date.now().toLocaleString();
         name = eliminarDiacriticos(name);
         flatArray.push(dto[currentKey]);
       }
@@ -256,18 +263,45 @@ const NarutoScraper = function () {
   }
 
   function saveFile(datos, name = "naruto.json") {
-    fs.writeFileSync(path.join(__dirname, `../../files/${name}`), JSON.stringify(datos));
+    const fileName = path.join(__dirname, `../../files/${name}`);
+
+    if (!fs.existsSync(fileName)) return fs.writeFileSync(fileName, JSON.stringify(datos));
+
+    let file = fs.readFileSync(fileName, { encoding: "utf8" });
+    file = JSON.parse(file);
+
+    let arr = Array.from(file);
+
+    if (process.env.NODE_ENV !== "production") arr = [...arr, ...datos];
+
+    fs.writeFileSync(fileName, JSON.stringify(arr));
+  }
+
+  async function saveLink(arrayLinksDto) {
+    try {
+      await scraperLinks.insertMany(arrayLinksDto);
+    } catch (e) {
+      logger.error(e.message);
+    }
   }
 
   function init() {
     logger.info("Iniciando Proceso NarutoScraper");
-    initSearch()
-      .then(() => {
-        logger.info("Finalizando Proceso NarutoScraper");
-      })
-      .catch(() => {
-        console.error("Error initializing");
-      });
+
+    getConnection();
+
+    connection.on("connected", function () {
+      initSearch()
+        .then(() => {
+          logger.info("Finalizando Proceso NarutoScraper");
+        })
+        .catch(() => {
+          console.error("Error initializing");
+        })
+        .finally(() => {
+          connection.close();
+        });
+    });
   }
 
   return {
@@ -275,7 +309,7 @@ const NarutoScraper = function () {
   };
 };
 
-const naruto = new NarutoScraper();
+const naruto = NarutoScraper();
 
 naruto.init();
 module.exports = NarutoScraper;

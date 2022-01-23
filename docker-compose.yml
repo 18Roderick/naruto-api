@@ -4,6 +4,7 @@ services:
   naruto-db:
     image: mongo
     container_name: nauruto-db-service
+    restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: "naruto"
       MONGO_INITDB_ROOT_PASSWORD: "naruto"
@@ -13,6 +14,16 @@ services:
       - 27017:27017
     networks:
       - naruto-net
+  redis:
+    image: "redis:latest"
+    restart: unless-stopped
+    networks:
+      - naruto-net
+    volumes:
+      - naruto-vol:/var/lib/redis
+    ports:
+      - 6379:6379
+
 volumes:
   naruto-vol:
 networks:
